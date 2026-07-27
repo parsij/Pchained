@@ -1,0 +1,19 @@
+services:
+  api:
+    image: unchained-local-node
+    env_file: .env
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.avalanche-api.rule=Host(`api.avalanche.localhost`)'
+      - 'traefik.http.services.avalanche-api.loadbalancer.server.port=3000'
+    working_dir: /app/node/coinstacks/avalanche/api
+    command: yarn run -T nodemon
+    volumes:
+      - ../../..:/app
+    networks:
+      - avalanche
+
+networks:
+  avalanche:
+    name: avalanche_default
+    external: true

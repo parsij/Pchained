@@ -1,0 +1,139 @@
+import { BaseAccount, BaseTx, BaseTxHistory, EstimateGasBody } from '../models' // unable to import models from a module with tsoa
+
+/**
+ * Contains info about estimated gas cost of a transaction
+ */
+export interface GasEstimate {
+  gasLimit: string
+}
+
+/**
+ * Contains info about legacy and/or EIP-1559 fees
+ */
+export interface Fees {
+  gasPrice: string
+  maxFeePerGas?: string
+  maxPriorityFeePerGas?: string
+}
+
+/**
+ * Contains info about current recommended fees to use in a transaction.
+ * Estimates for slow, average and fast confirmation speeds provided as well.
+ */
+export interface GasFees {
+  // baseFeePerGas for the pending block
+  baseFeePerGas?: string
+  // slow confirmation speed estimation
+  slow: Fees
+  // average confirmation speed estimation
+  average: Fees
+  // average confirmation speed estimation
+  fast: Fees
+}
+
+/**
+ * Contains info about a token
+ */
+export interface Token {
+  contract: string
+  decimals: number
+  name: string
+  symbol: string
+  type: string
+  /** nft or multi token id */
+  id?: string
+}
+
+/**
+ * Contains info about a token including balance for an address
+ */
+export interface TokenBalance extends Token {
+  balance: string
+}
+
+/**
+ * Contains info about a token including transfer details
+ */
+export interface TokenTransfer extends Token {
+  from: string
+  to: string
+  value: string
+  /** nft or multi token id */
+  id?: string
+}
+
+/**
+ * Contains info about an EVM account
+ */
+export interface Account extends BaseAccount {
+  nonce: number
+  tokens: Array<TokenBalance>
+}
+
+/**
+ * Contains info about an EVM transaction
+ */
+export interface Tx extends BaseTx {
+  from: string
+  to: string
+  confirmations: number
+  value: string
+  fee: string
+  gasLimit: string
+  gasUsed?: string
+  gasPrice: string
+  status: number
+  inputData?: string
+  tokenTransfers?: Array<TokenTransfer>
+  internalTxs?: Array<InternalTx>
+}
+
+/**
+ * Contains info about an EVM internal transaction
+ */
+export interface InternalTx {
+  from: string
+  to: string
+  value: string
+}
+
+/**
+ * Contains info about EVM transaction history
+ */
+export type TxHistory = BaseTxHistory<Tx>
+
+/**
+ * Extended EVM specific functionality
+ */
+export interface API {
+  /**
+   * Get transaction details
+   *
+   * @param {string} txid transaction hash
+   *
+   * @returns {Promise<Tx>} transaction payload
+   */
+  // @Get('tx/{txid}')
+  getTransaction(txid: string): Promise<Tx>
+
+  /**
+   * Estimate gas cost of a transaction
+   *
+   * @param {EstimateGasBody} body transaction data to estimate gas cost
+   *
+   * @returns {Promise<GasEstimate>} estimated gas cost
+   */
+  //@Post('/gas/estimate')
+  estimateGas(body: EstimateGasBody): Promise<GasEstimate>
+
+  /**
+   * Get the current recommended gas fees to use in a transaction
+   *
+   * * For EIP-1559 transactions, use `maxFeePerGas` and `maxPriorityFeePerGas`
+   * * For Legacy transactions, use `gasPrice`
+   *
+   * @returns {Promise<GasFees>} current fees specified in wei
+   */
+  // @Get('/gas/fees')
+  getGasFees(): Promise<GasFees>
+}

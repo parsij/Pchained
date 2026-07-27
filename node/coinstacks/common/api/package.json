@@ -1,0 +1,28 @@
+{
+  "name": "@shapeshiftoss/common-api",
+  "version": "10.0.0",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "source": "src/index.ts",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "yarn run -T tsc",
+    "clean": "rm -rf dist node_modules",
+    "watch": "yarn run -T tsc --watch"
+  },
+  "dependencies": {
+    "@shapeshiftoss/blockbook": "^10.0.0",
+    "@shapeshiftoss/prometheus": "^10.0.0",
+    "@shapeshiftoss/websocket": "^10.0.0",
+    "bignumber.js": "^9.1.2",
+    "uuid": "^9.0.1",
+    "ws": "^8.15.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.7",
+    "@types/ws": "^8.5.10"
+  }
+}

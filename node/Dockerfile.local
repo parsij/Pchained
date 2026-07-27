@@ -1,0 +1,5 @@
+FROM node:22.14.0-alpine
+
+RUN apk add --no-cache openssl openjdk11
+
+USER node

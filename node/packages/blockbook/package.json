@@ -1,0 +1,26 @@
+{
+  "name": "@shapeshiftoss/blockbook",
+  "version": "10.0.0",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "source": "src/index.ts",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "yarn generate && yarn run -T tsc",
+    "clean": "rm -rf dist node_modules src/routes.ts src/swagger.json",
+    "dev": "yarn run -T nodemon -e ts --watch src --ignore src/routes.ts -x 'yarn build && node dist/app.js'",
+    "generate": "yarn run -T tsoa spec-and-routes",
+    "start": "node dist/app.js",
+    "watch": "yarn run -T nodemon -e ts --watch src --ignore src/routes.ts -x yarn build"
+  },
+  "dependencies": {
+    "@shapeshiftoss/websocket": "^10.0.0",
+    "ws": "^8.15.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10"
+  }
+}
