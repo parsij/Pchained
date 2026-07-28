@@ -1,0 +1,112 @@
+name: Clean non-main branches
+
+on:
+  push:
+    branches: [maintenance/branch-cleanup]
+    paths:
+      - .github/workflows/branch-cleanup.yml
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CONTROLLER_PR: '2'
+      CONTROLLER_BRANCH: maintenance/branch-cleanup
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: maintenance/branch-cleanup
+          fetch-depth: 0
+
+      - name: Verify and remove branches
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
+          mapfile -t branches < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/branches?per_page=100" \
+              --jq '.[].name' | sort -u
+          )
+
+          safe_file="$(mktemp)"
+          unknown_file="$(mktemp)"
+          report="$(mktemp)"
+
+          for branch in "${branches[@]}"; do
+            [[ "$branch" == "main" || "$branch" == "$CONTROLLER_BRANCH" ]] && continue
+
+            reason=""
+            prs="$(gh pr list --state all --head "$branch" \
+              --json number,state,isDraft,mergedAt,title,url)"
+
+            if [[ "$(jq '[.[] | select(.mergedAt != null)] | length' <<<"$prs")" -gt 0 ]]; then
+              reason="already merged through a pull request"
+            elif git merge-base --is-ancestor "origin/$branch" origin/main 2>/dev/null; then
+              reason="branch tip is already an ancestor of main"
+            elif git diff --quiet origin/main "origin/$branch" -- 2>/dev/null; then
+              reason="branch tree is identical to main"
+            elif [[ "$branch" == "audit/standalone-publication" ]]; then
+              reason="completed temporary publication-audit branch"
+            fi
+
+            if [[ -n "$reason" ]]; then
+              printf '%s\t%s\n' "$branch" "$reason" >> "$safe_file"
+            else
+              printf '%s\t%s\n' "$branch" "$prs" >> "$unknown_file"
+            fi
+          done
+
+          {
+            echo "## Pchained branch cleanup audit"
+            echo
+            echo "The one-commit main branch was not modified."
+            echo
+            echo "### Safe to delete"
+            if [[ -s "$safe_file" ]]; then
+              while IFS=$'\t' read -r branch reason; do
+                printf -- '- `%s`: %s\n' "$branch" "$reason"
+              done < "$safe_file"
+            else
+              echo "- None"
+            fi
+            echo
+            echo "### Unknown divergent branches"
+            if [[ -s "$unknown_file" ]]; then
+              while IFS=$'\t' read -r branch prs; do
+                printf -- '- `%s`: not proven integrated. PR metadata: `%s`\n' "$branch" "$prs"
+              done < "$unknown_file"
+            else
+              echo "- None"
+            fi
+          } > "$report"
+
+          if [[ -s "$unknown_file" ]]; then
+            gh pr comment "$CONTROLLER_PR" --body-file "$report"
+            exit 1
+          fi
+
+          while IFS=$'\t' read -r branch reason; do
+            while read -r pr_number; do
+              [[ -z "$pr_number" ]] && continue
+              gh pr close "$pr_number" --comment "Closed during branch cleanup. Classification: $reason."
+            done < <(gh pr list --state open --head "$branch" --json number --jq '.[].number')
+            git push origin --delete "$branch"
+          done < "$safe_file"
+
+          {
+            echo
+            echo "### Result"
+            echo "All non-main branches were deleted. Main still points to the original standalone root commit."
+          } >> "$report"
+
+          gh pr comment "$CONTROLLER_PR" --body-file "$report"
+          gh pr close "$CONTROLLER_PR" --comment "Cleanup completed. Deleting the temporary controller branch now."
+          git push origin --delete "$CONTROLLER_BRANCH"
