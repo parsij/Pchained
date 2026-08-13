@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@shapeshiftoss/prometheus": "^10.0.0",
-    "ws": "^8.15.0"
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@types/ws": "^8.5.10"
